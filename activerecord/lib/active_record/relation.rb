@@ -642,8 +642,28 @@ module ActiveRecord
       preload +=  includes_values unless eager_loading?
       preloader = build_preloader
       preload.each do |associations|
-        preloader.preload @records, associations
+        puts 'Preloader skipped !'
+        # preloader.preload @records, associations
+
+        association_names = Array.wrap(associations).flat_map do |association|
+          case association
+          when Hash
+            association.keys
+          when Symbol
+            association
+          when String
+            association.to_sym
+          else
+            raise ArgumentError, "#{association.inspect} was not recognised for preload"
+          end
+        end.flatten.each do |association_name|
+          Array.wrap(@records).compact.uniq.each do |record|
+            record.association(association_name).preload_records = @records
+            record.association(association_name).preload_associations = associations
+          end
+        end
       end
+
 
       @records.each { |record| record.readonly! } if readonly_value
 

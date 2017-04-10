@@ -135,6 +135,8 @@ module ActiveRecord
       # ActiveRecord::RecordNotFound is rescued within the method, and it is
       # not reraised. The proxy is \reset and +nil+ is the return value.
       def load_target
+        lazy_preload # for SingularAssociation
+
         @target = find_target if (@stale_state && stale_target?) || find_target?
 
         loaded! unless loaded?
@@ -170,9 +172,26 @@ module ActiveRecord
         set_inverse_instance(record)
       end
 
+      def preload_records=(records)
+        @preload_records = records
+      end
+
+      def preload_associations=(associations)
+        @preload_associations = associations
+      end
+
       private
+        def lazy_preload
+          puts 'Lazy preload in ' + self.class.name
+          if @preload_records
+            ActiveRecord::Associations::Preloader.new.preload @preload_records, @preload_associations
+            @preload_records = nil
+          end
+        end
 
         def find_target?
+          lazy_preload # for CollectionAssociation
+
           !loaded? && (!owner.new_record? || foreign_key_present?) && klass
         end
 
